@@ -37,6 +37,27 @@ POST http://<host>:8080/api/v1/ops/analyze-alert
 Header: X-API-Key: <key>
 Body: {"alert": "...", "logs": "..."}
 ```
+## CPU 演示模式（无 GPU）
+无 GPU 环境可用 Ollama 快速体验完整链路（Chat + Embedding 均由 Ollama 提供）：
+
+```bash
+# 1. 启动 Ollama 并拉取模型
+docker compose --profile cpu up -d ollama
+docker compose exec ollama ollama pull qwen2.5:7b
+
+# 2. .env 中切换到 CPU 配置：
+#    LLM_BASE_URL=http://ollama:11434/v1
+#    LLM_MODEL=qwen2.5:7b
+#    EMBEDDING_BASE_URL=http://ollama:11434/v1
+#    RERANK_ENABLED=false
+
+# 3. 拉起核心服务
+docker compose up -d qdrant backend nginx
+make init-collection
+```
+
+说明：CPU 模式关闭 Reranker（无轻量 CPU 重排替代），检索退化为向量序 + BM25 混合，
+功能链路完整，适合功能演示与项目验收。
 ## 离线 / 信创内网部署
 运行时无外联；首次部署需准备离线包（镜像 + 模型权重）。
 1. 打包机（有网）：`docker save` 导出镜像 + `hf download` 拉模型权重

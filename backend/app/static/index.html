@@ -60,7 +60,12 @@
   </div>
 
   <div class="card">
-    <h2><span class="step">2</span>知识库问答 <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="agentMode" type="checkbox" style="width:auto" /> Agent 模式（工具调用+多轮）</label> <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="streamMode" type="checkbox" style="width:auto" /> 流式输出</label></h2>
+    <h2><span class="step">2</span>文档管理 <button id="listBtn" class="gray" style="margin:0 0 0 auto;padding:5px 12px;font-size:12px;">刷新列表</button></h2>
+    <div id="docList" style="font-size:13px;color:#94a3b8;"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span>知识库问答 <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="agentMode" type="checkbox" style="width:auto" /> Agent 模式（工具调用+多轮）</label> <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="streamMode" type="checkbox" style="width:auto" /> 流式输出</label></h2>
     <textarea id="q" placeholder="输入运维问题，例如：Nginx 返回 502，上游是 Java 服务，如何排查？"></textarea>
     <div class="row">
       <button id="btn">提问</button>
@@ -162,6 +167,45 @@ $("btn").onclick = async () => {
 };
 
 $("q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("btn").click(); });
+
+async function loadDocs() {
+  $("docList").textContent = "加载中…";
+  try {
+    const r = await fetch("/api/v1/kb/documents", {headers: {"X-API-Key": $("apiKey").value}});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    if (!d || !d.length) { $("docList").textContent = "暂无文档，请先在上方上传"; return; }
+    $("docList").innerHTML = d.map(x => `
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #334155;flex-wrap:wrap;">
+        <span>${x.doc_name} <span style="color:#64748b;font-size:12px;">[${x.status}]</span></span>
+        <span style="display:flex;gap:6px;">
+          <button class="gray" style="padding:3px 10px;font-size:12px;" onclick="approveDoc('${x.doc_id}')">审核</button>
+          <button class="gray" style="padding:3px 10px;font-size:12px;" onclick="delDoc('${x.doc_id}')">删除</button>
+        </span>
+      </div>`).join("");
+  } catch(e) {
+    $("docList").textContent = "加载失败：" + e.message;
+  }
+}
+
+async function approveDoc(id) {
+  try {
+    const r = await fetch(`/api/v1/kb/documents/${id}/approve`, {method:"POST", headers: {"X-API-Key": $("apiKey").value}});
+    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || r.statusText);
+    loadDocs();
+  } catch(e) { alert("审核失败：" + e.message); }
+}
+
+async function delDoc(id) {
+  if (!confirm("确认删除该文档及其向量索引？")) return;
+  try {
+    const r = await fetch(`/api/v1/kb/documents/${id}`, {method:"DELETE", headers: {"X-API-Key": $("apiKey").value}});
+    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || r.statusText);
+    loadDocs();
+  } catch(e) { alert("删除失败：" + e.message); }
+}
+
+$("listBtn").onclick = loadDocs;
 </script>
 </body>
 </html>

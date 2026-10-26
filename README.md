@@ -28,6 +28,8 @@ flowchart LR
 | --- | --- |
 | 私有化部署 | Docker Compose 编排 Qdrant / Embedding / Reranker / LLM / Backend / Nginx |
 | RAG 知识库 | 多格式解析（PDF/Word/MD/TXT）+ 递归切分 + 向量化 + Reranker 重排 |
+| 混合检索 | 向量召回 + BM25 关键词召回，RRF 融合，长尾命中增强 |
+| 文档管理 | 前端可视化：文档列表 / 审核 / 删除 |
 | 运维 Agent | 告警 → Prompt 模板 → 日志提取 → 初步分析，对接任意监控 Webhook |
 | Agent 编排 | Function Calling 工具调用（知识库/日志/时间/文档清单）+ 多轮会话记忆 |
 | 流式问答 | SSE 逐字输出（/chat/stream），失败自动降级兜底话术 |

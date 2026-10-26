@@ -47,6 +47,14 @@ services:
         reservations:
           devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
     networks: [internal]
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["cpu"]
+    restart: unless-stopped
+    command: serve
+    volumes:
+      - model_cache:/root/.ollama
+    networks: [internal]
   backend:
     build: ./backend
     restart: unless-stopped

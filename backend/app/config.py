@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     chunk_size: int = 800
     chunk_overlap: int = 120
     retrieve_top_k: int = 20
+    hybrid_enabled: bool = True
     meta_db_path: str = "/data/meta.db"
     upload_dir: str = "/data/uploads"
     @property
