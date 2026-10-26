@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.core.security import IPWhitelistMiddleware
+from app.core.request_id import RequestIDMiddleware
 from app.api import chat, kb, ops, health
 from app.store import meta_db
 from app.rag import retriever
@@ -14,10 +15,11 @@ logging.basicConfig(
 )
 app = FastAPI(
     title="OpsRAG Copilot",
-    version="0.1.0",
+    version="0.2.0",
     description="Private-cloud AIOps & RAG knowledge copilot",
 )
 app.add_middleware(IPWhitelistMiddleware)
+app.add_middleware(RequestIDMiddleware)
 app.include_router(health.router)
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(kb.router, prefix="/api/v1")

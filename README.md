@@ -30,6 +30,8 @@ flowchart LR
 | RAG 知识库 | 多格式解析（PDF/Word/MD/TXT）+ 递归切分 + 向量化 + Reranker 重排 |
 | 运维 Agent | 告警 → Prompt 模板 → 日志提取 → 初步分析，对接任意监控 Webhook |
 | Agent 编排 | Function Calling 工具调用（知识库/日志/时间/文档清单）+ 多轮会话记忆 |
+| 流式问答 | SSE 逐字输出（/chat/stream），失败自动降级兜底话术 |
+| 可观测性 | X-Request-ID 全链路透传 + 结构化访问日志（方法/路径/状态/耗时） |
 | 访问控制 | IP 白名单中间件 + API Key 鉴权 + 文档审核接口 |
 | 降级兜底 | 大模型不可用时自动返回"检索原文 + 兜底话术"，保证可用性 |
 ## 项目定位

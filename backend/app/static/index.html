@@ -60,7 +60,7 @@
   </div>
 
   <div class="card">
-    <h2><span class="step">2</span>知识库问答 <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="agentMode" type="checkbox" style="width:auto" /> Agent 模式（工具调用+多轮）</label></h2>
+    <h2><span class="step">2</span>知识库问答 <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="agentMode" type="checkbox" style="width:auto" /> Agent 模式（工具调用+多轮）</label> <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="streamMode" type="checkbox" style="width:auto" /> 流式输出</label></h2>
     <textarea id="q" placeholder="输入运维问题，例如：Nginx 返回 502，上游是 Java 服务，如何排查？"></textarea>
     <div class="row">
       <button id="btn">提问</button>
@@ -103,11 +103,37 @@ $("btn").onclick = async () => {
   const q = $("q").value.trim();
   if (!q) return;
   const agent = $("agentMode").checked;
+  const stream = $("streamMode").checked && !agent;   // Agent 模式暂不流式
   $("btn").disabled = true;
-  $("out").textContent = agent ? "Agent 推理中（LLM 自主调用工具）…" : "检索中…";
+  $("out").textContent = stream ? "" : (agent ? "Agent 推理中（LLM 自主调用工具）…" : "检索中…");
   $("ref").textContent = "";
   $("trace").textContent = "";
   try {
+    if (stream) {
+      const r = await fetch("/api/v1/chat/stream", {
+        method: "POST", headers: await headers(),
+        body: JSON.stringify({question:q, top_k:5})
+      });
+      if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.detail || r.statusText); }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream:true});
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) >= 0) {
+          const line = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 2);
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (payload === "[DONE]") continue;
+          try { const d = JSON.parse(payload); if (d.delta) $("out").textContent += d.delta; } catch(e) {}
+        }
+      }
+      return;
+    }
     let url, body;
     if (agent) {
       let sid = localStorage.getItem("opsrag_sid");

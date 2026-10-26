@@ -1,4 +1,6 @@
+import json
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.core.security import require_api_key
 from app.core.llm import llm
@@ -46,3 +48,34 @@ async def agent_query(body: AgentQueryIn):
     """Agent 模式：LLM 自主调用工具（知识库检索 / 日志提取 / 时间等），支持多轮会话。"""
     result = await run_agent(body.question, session_id=body.session_id, top_k=body.top_k)
     return AgentQueryOut(**result)
+
+
+@router.post("/stream")
+async def stream_query(body: QueryIn):
+    """SSE 流式问答：检索 → 重排 → LLM 逐字输出，失败自动降级为兜底话术。"""
+    async def _gen():
+        hits = await retriever.search(body.question, dept=body.dept)
+        if not hits:
+            yield _sse({"delta": "知识库中暂未找到相关内容，请先上传对应文档。"})
+            yield "data: [DONE]\n\n"
+            return
+        hits = await reranker.rerank(body.question, hits, top_n=body.top_k)
+        context = "\n\n".join(f"[{h['doc_name']}] {h['text'][:800]}" for h in hits)
+        prompt = RAG_ANSWER_PROMPT.format(context=context, question=body.question)
+        try:
+            async for chunk in llm.stream([{"role": "user", "content": prompt}]):
+                if chunk:
+                    yield _sse({"delta": chunk})
+        except Exception:  # noqa: BLE001
+            yield _sse({"delta": FALLBACK_MESSAGE})
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        _gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _sse(payload: dict) -> str:
+    return "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
