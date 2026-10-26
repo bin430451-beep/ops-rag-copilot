@@ -60,13 +60,14 @@
   </div>
 
   <div class="card">
-    <h2><span class="step">2</span>知识库问答</h2>
+    <h2><span class="step">2</span>知识库问答 <label style="font-weight:400;font-size:13px;color:#94a3b8;margin-left:8px;display:inline-flex;align-items:center;gap:4px;"><input id="agentMode" type="checkbox" style="width:auto" /> Agent 模式（工具调用+多轮）</label></h2>
     <textarea id="q" placeholder="输入运维问题，例如：Nginx 返回 502，上游是 Java 服务，如何排查？"></textarea>
     <div class="row">
       <button id="btn">提问</button>
     </div>
     <div class="out" id="out">结果会显示在这里…</div>
     <div class="ref" id="ref"></div>
+    <div class="ref" id="trace"></div>
   </div>
 </div>
 <script>
@@ -101,20 +102,34 @@ $("uploadBtn").onclick = async () => {
 $("btn").onclick = async () => {
   const q = $("q").value.trim();
   if (!q) return;
+  const agent = $("agentMode").checked;
   $("btn").disabled = true;
-  $("out").textContent = "检索中…";
+  $("out").textContent = agent ? "Agent 推理中（LLM 自主调用工具）…" : "检索中…";
   $("ref").textContent = "";
+  $("trace").textContent = "";
   try {
-    const r = await fetch("/api/v1/chat/query", {
-      method: "POST",
-      headers: await headers(),
-      body: JSON.stringify({question:q, top_k:5})
-    });
+    let url, body;
+    if (agent) {
+      let sid = localStorage.getItem("opsrag_sid");
+      if (!sid) { sid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())); localStorage.setItem("opsrag_sid", sid); }
+      url = "/api/v1/chat/agent";
+      body = JSON.stringify({question:q, session_id:sid, top_k:5});
+    } else {
+      url = "/api/v1/chat/query";
+      body = JSON.stringify({question:q, top_k:5});
+    }
+    const r = await fetch(url, { method: "POST", headers: await headers(), body: body });
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || r.statusText);
-    $("out").textContent = d.degraded ? "【降级模式】" + d.answer : d.answer;
-    $("ref").textContent = (d.references||[]).map((x,i)=>
-      `${i+1}. [${x.doc_name}] score=${(x.score||0).toFixed(3)}`).join("\n");
+    $("out").textContent = d.degraded ? "【降级】" + d.answer : d.answer;
+    if (d.references && d.references.length) {
+      $("ref").textContent = (d.references).map((x,i)=>
+        `${i+1}. [${x.doc_name}] score=${(x.score||0).toFixed(3)}`).join("\n");
+    }
+    if (d.trace && d.trace.length) {
+      $("trace").textContent = "Agent 步骤：" + d.trace.map((t,i)=>
+        `${i+1}. 调用 ${t.tool}(${t.args||""})`).join("  →  ");
+    }
   } catch(e) {
     $("out").textContent = "请求失败：" + e.message;
   } finally { $("btn").disabled = false; }

@@ -4,6 +4,7 @@ from app.core.security import require_api_key
 from app.core.llm import llm
 from app.rag import retriever, reranker
 from app.agent.prompts import RAG_ANSWER_PROMPT, FALLBACK_MESSAGE
+from app.agent.agent_runner import run_agent
 router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(require_api_key)])
 class QueryIn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
@@ -26,3 +27,22 @@ async def query(body: QueryIn):
         return QueryOut(answer=answer, references=hits)
     except Exception:
         return QueryOut(answer=FALLBACK_MESSAGE, references=hits, degraded=True)
+
+
+class AgentQueryIn(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    session_id: str | None = None
+    top_k: int = 5
+
+
+class AgentQueryOut(BaseModel):
+    answer: str
+    trace: list[dict] = []
+    degraded: bool = False
+
+
+@router.post("/agent", response_model=AgentQueryOut)
+async def agent_query(body: AgentQueryIn):
+    """Agent 模式：LLM 自主调用工具（知识库检索 / 日志提取 / 时间等），支持多轮会话。"""
+    result = await run_agent(body.question, session_id=body.session_id, top_k=body.top_k)
+    return AgentQueryOut(**result)

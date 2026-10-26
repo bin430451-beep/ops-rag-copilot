@@ -27,6 +27,24 @@ class LLMClient:
         except Exception as e:  # noqa: BLE001
             log.exception("LLM call failed: %s", e)
             raise
+
+    async def chat_with_tools(self, messages: list[dict], tools: list[dict],
+                              temperature: float = 0.2, max_tokens: int = 2048) -> dict:
+        """Function Calling：返回完整 message dict（含 content 或 tool_calls）。"""
+        payload = {
+            "model": _settings.llm_model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "tools": tools,
+        }
+        try:
+            r = await self._client.post("/chat/completions", json=payload)
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]
+        except Exception as e:  # noqa: BLE001
+            log.exception("LLM tool-call request failed: %s", e)
+            raise
     async def stream(self, messages: list[dict], temperature: float = 0.2) -> AsyncIterator[str]:
         payload = {"model": _settings.llm_model, "messages": messages,
                    "temperature": temperature, "stream": True}
