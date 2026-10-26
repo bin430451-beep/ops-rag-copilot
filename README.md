@@ -31,6 +31,15 @@ flowchart LR
 | 运维 Agent | 告警 → Prompt 模板 → 日志提取 → 初步分析，对接任意监控 Webhook |
 | 访问控制 | IP 白名单中间件 + API Key 鉴权 + 文档审核接口 |
 | 降级兜底 | 大模型不可用时自动返回"检索原文 + 兜底话术"，保证可用性 |
+## 项目定位
+本项目**不训练任何模型、不重复造轮子**，核心价值在于**开源组件的调用、集成、搭建与部署落地**：
+
+- 通过 **OpenAI 兼容协议**调用 Qwen / DeepSeek 推理服务（vLLM / Ollama 部署）
+- 使用 **TEI** 部署 Embedding / Reranker 模型服务
+- 使用 **Qdrant** 作为向量检索后端
+- FastAPI 仅做轻量**编排网关**，将各组件串成可落地的业务闭环
+
+适合作为企业内网"大模型 + RAG + 运维辅助"的**集成实施样板**，开箱可部署、可交付、可验收。
 ## 技术栈
 - **LLM**：Qwen2.5-14B / DeepSeek（vLLM / Ollama 部署）
 - **Embedding**：Qwen3-Embedding-0.6B（TEI）
