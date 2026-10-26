@@ -1,0 +1,1 @@
+"""OpsRAG Copilot backend package."""
