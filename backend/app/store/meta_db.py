@@ -13,7 +13,7 @@ def init_db() -> None:
             doc_id TEXT PRIMARY KEY,
             doc_name TEXT NOT NULL,
             dept TEXT NOT NULL DEFAULT 'public',
-            status TEXT NOT NULL DEFAULT 'approved',
+            status TEXT NOT NULL DEFAULT 'pending',
             uploader TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )""")

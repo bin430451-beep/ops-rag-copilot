@@ -2,32 +2,102 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>OpsRAG Copilot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpsRAG Copilot - 智能运维知识库演示</title>
 <style>
+  *{box-sizing:border-box}
   body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
-  .wrap{max-width:900px;margin:0 auto;padding:32px 20px}
-  h1{font-size:20px;margin:0 0 6px}
-  .sub{color:#94a3b8;font-size:13px;margin-bottom:24px}
-  textarea{width:100%;min-height:90px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:12px;font-size:14px}
-  button{margin-top:12px;background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 48px}
+  .hero{border-bottom:1px solid #1e293b;padding-bottom:18px;margin-bottom:22px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:#94a3b8;font-size:13px}
+  .badges{margin-top:10px;font-size:12px;color:#64748b}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;margin:0 0 12px;color:#e2e8f0;display:flex;align-items:center;gap:8px}
+  .card h2 .step{background:#2563eb;color:#fff;border-radius:6px;font-size:12px;padding:2px 8px;font-weight:600}
+  label{display:block;font-size:12px;color:#94a3b8;margin:10px 0 4px}
+  input[type=text],input[type=password],textarea{width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px 12px;font-size:14px;font-family:inherit}
+  input[type=file]{font-size:13px;color:#94a3b8}
+  textarea{min-height:88px;resize:vertical}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:600}
+  button:hover{background:#1d4ed8}
   button:disabled{opacity:.5;cursor:not-allowed}
-  .out{margin-top:20px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;white-space:pre-wrap;font-size:14px;line-height:1.7;min-height:80px}
-  .ref{margin-top:14px;font-size:12px;color:#94a3b8;white-space:pre-wrap}
-  input{background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;width:260px;margin-bottom:12px}
+  button.gray{background:#334155}
+  .out{margin-top:14px;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px;white-space:pre-wrap;font-size:14px;line-height:1.7;min-height:70px}
+  .ref{margin-top:10px;font-size:12px;color:#94a3b8;white-space:pre-wrap}
+  .tip{font-size:12px;color:#64748b;margin-top:8px}
+  .ok{color:#4ade80;font-size:13px;margin-top:8px}
+  .err{color:#f87171;font-size:13px;margin-top:8px}
+  .dept{width:130px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>OpsRAG Copilot</h1>
-  <div class="sub">私有云智能运维与知识协作 · 数据不出内网</div>
-  <input id="apiKey" placeholder="X-API-Key" />
-  <textarea id="q" placeholder="输入运维问题，例如：K8s Pod 一直 CrashLoopBackOff 怎么排查？"></textarea>
-  <button id="btn">提问</button>
-  <div class="out" id="out">结果会显示在这里…</div>
-  <div class="ref" id="ref"></div>
+  <div class="hero">
+    <h1>OpsRAG Copilot</h1>
+    <div class="sub">企业私有云智能运维与 RAG 知识协作平台 · 数据不出内网</div>
+    <div class="badges">Demo 演示界面 · 上传运维文档 → 向量化入库 → 智能问答 / 告警分析</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">0</span>API Key</h2>
+    <input id="apiKey" type="password" placeholder="输入 X-API-Key（默认 dev-key，生产环境请修改）" />
+    <div class="tip">Key 与后端 .env 中 API_KEYS 一致</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">1</span>上传文档到知识库</h2>
+    <label>选择文件（支持 .txt / .md / .pdf / .docx）</label>
+    <input id="file" type="file" accept=".txt,.md,.pdf,.docx" />
+    <label>部门隔离字段 dept（可选，用于知识隔离）</label>
+    <input id="dept" class="dept" type="text" value="public" />
+    <div class="row">
+      <button id="uploadBtn">上传</button>
+    </div>
+    <div id="uploadMsg"></div>
+    <div class="tip">可直接用仓库内示例文档：docs/sample.md</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>知识库问答</h2>
+    <textarea id="q" placeholder="输入运维问题，例如：Nginx 返回 502，上游是 Java 服务，如何排查？"></textarea>
+    <div class="row">
+      <button id="btn">提问</button>
+    </div>
+    <div class="out" id="out">结果会显示在这里…</div>
+    <div class="ref" id="ref"></div>
+  </div>
 </div>
 <script>
 const $ = id => document.getElementById(id);
+
+async function headers() {
+  return {"Content-Type":"application/json","X-API-Key":$("apiKey").value};
+}
+
+$("uploadBtn").onclick = async () => {
+  const file = $("file").files[0];
+  if (!file) { $("uploadMsg").innerHTML = '<div class="err">请先选择文件</div>'; return; }
+  $("uploadBtn").disabled = true;
+  $("uploadMsg").innerHTML = '<div class="tip">上传并向量化中…（首次需等待 Embedding 服务）</div>';
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("dept", $("dept").value.trim() || "public");
+  try {
+    const r = await fetch("/api/v1/kb/upload", {
+      method: "POST",
+      headers: {"X-API-Key":$("apiKey").value},
+      body: fd
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    $("uploadMsg").innerHTML = `<div class="ok">上传成功：${d.doc_name}（doc_id: ${d.doc_id}，共 ${d.chunks} 个分块）</div>`;
+  } catch(e) {
+    $("uploadMsg").innerHTML = `<div class="err">上传失败：${e.message}</div>`;
+  } finally { $("uploadBtn").disabled = false; }
+};
+
 $("btn").onclick = async () => {
   const q = $("q").value.trim();
   if (!q) return;
@@ -37,18 +107,20 @@ $("btn").onclick = async () => {
   try {
     const r = await fetch("/api/v1/chat/query", {
       method: "POST",
-      headers: {"Content-Type":"application/json","X-API-Key":$("apiKey").value},
+      headers: await headers(),
       body: JSON.stringify({question:q, top_k:5})
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || r.statusText);
-    $("out").textContent = d.answer;
+    $("out").textContent = d.degraded ? "【降级模式】" + d.answer : d.answer;
     $("ref").textContent = (d.references||[]).map((x,i)=>
       `${i+1}. [${x.doc_name}] score=${(x.score||0).toFixed(3)}`).join("\n");
   } catch(e) {
     $("out").textContent = "请求失败：" + e.message;
   } finally { $("btn").disabled = false; }
 };
+
+$("q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("btn").click(); });
 </script>
 </body>
 </html>

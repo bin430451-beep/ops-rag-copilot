@@ -52,6 +52,43 @@ backend/app/core     # 鉴权 / IP 白名单 / LLM 客户端
 deploy/nginx         # 反向代理配置
 docs/                # 架构 / 部署 / 用户 SOP
 ```
+## 快速演示（Demo）
+> 完整流程：拉起服务 → 上传示例文档 → 知识库问答。
+> 模型服务（Embedding / Reranker / LLM）需 GPU 节点或已就绪的模型端点；无 GPU 时仍可演示「降级兜底」能力。
+
+```bash
+cp .env.example .env
+docker compose --profile gpu up -d embedding reranker llm   # 拉起模型服务
+docker compose up -d qdrant backend nginx                   # 拉起核心服务
+make init-collection                                        # 初始化向量集合
+```
+
+浏览器访问 `http://<host>:8080`，按界面引导：
+
+1. 输入 API Key（默认 `dev-key`，生产务必修改）
+2. 上传示例文档 `docs/sample.md`（含 Nginx 502 / Oracle 表空间 / K8s CrashLoopBackOff / Fastjson 漏洞等常见 SOP）
+3. 提问，例如：
+   > Nginx 返回 502，上游是 Java 服务，如何排查？
+
+命令行冒烟测试：
+
+```bash
+# 上传示例文档
+curl -X POST http://localhost:8080/api/v1/kb/upload \
+  -H "X-API-Key: dev-key" \
+  -F "file=@docs/sample.md" -F "dept=public"
+
+# 知识库问答
+curl -X POST http://localhost:8080/api/v1/chat/query \
+  -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
+  -d '{"question":"Oracle 表空间满了怎么办？"}'
+
+# 告警分析（对接监控 Webhook）
+curl -X POST http://localhost:8080/api/v1/ops/analyze-alert \
+  -H "X-API-Key: dev-key" -H "Content-Type: application/json" \
+  -d '{"alert":"K8s Pod CrashLoopBackOff","logs":"error: context deadline exceeded"}'
+```
+
 ## 部署
 > 运行阶段无外联，部署阶段支持离线镜像 + 本地模型目录。
 > 详细步骤见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
