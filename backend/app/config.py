@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     allowed_ips: str = "127.0.0.1"
     api_keys: str = "dev-key"
+    trusted_proxies: str = "127.0.0.1,172.16.0.0/12"
+    rate_limit_per_min: int = 60
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "ops_kb"
     embedding_base_url: str = "http://localhost:8081/v1"
